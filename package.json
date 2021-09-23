@@ -1,0 +1,12 @@
+{
+  "name": "@csoft/react-s3-upload",
+  "version": "1.0.0",
+  "dependencies": {
+    "aws-sdk": "^2.993.0"
+  },
+  "main": "./index.js",
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
