@@ -174,4 +174,20 @@ export class AwsService {
     }
     return availableAttachmentType.IMAGE;
   }
+
+  /**
+   * @description Get Presigned url
+   * @param {*} bucket Bucket Name
+   * @param {*} Key Full file path
+   * @param {*} region Region of S3 bucket
+   * @returns 
+   */
+  async getPresignedUrl(bucket,Key,region){
+    const bucket = this.getBucket(bucket,region);
+    const signedUrlParams = {
+      Bucket: bucket,
+      Key
+    }
+    return await bucket.getSignedUrlPromise('getObject',signedUrlParams)
+  }
 }
