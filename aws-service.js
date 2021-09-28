@@ -7,6 +7,7 @@ import {
   BLOB_SIZE
 } from './constants';
 import AWS from 'aws-sdk';
+import moment from 'moment';
 
 export class AwsService {
   //client;
@@ -18,6 +19,7 @@ export class AwsService {
    */
   constructor(config) {
     AWS.config.update(config);
+    this.cache = {};
   }
 
   /**
@@ -176,18 +178,40 @@ export class AwsService {
   }
 
   /**
-   * @description Get Presigned url
-   * @param {*} bucket Bucket Name
-   * @param {*} Key Full file path
-   * @param {*} region Region of S3 bucket
+   * @param {*} bucket 
+   * @param {*} bucketName 
+   * @param {*} Key 
+   * @param {*} Expires 
    * @returns 
    */
-  async getPresignedUrl(bucket,Key,region){
-    const bucket = this.getBucket(bucket,region);
-    const signedUrlParams = {
-      Bucket: bucket,
-      Key
+  async getPresignedUrl (
+    bucket,
+    bucketName,
+    Key,
+    Expires = 60 * 60
+  ) {
+    if (this.cache[Key] && !this.isPresignedUrlExpired(this.cache[Key].time)) {
+      return this.cache[Key].url;
     }
-    return await bucket.getSignedUrlPromise('getObject',signedUrlParams)
+    const url = await bucket.getSignedUrl("getObject", {
+      Bucket: bucketName,
+      Key,
+      Expires,
+    });
+    this.cache[Key] = {
+      url,
+      time: moment().add(Expires, "seconds").subtract(10, "seconds"),
+    };
+    return url;
+  }
+
+  isPresignedUrlExpired(expiredIn){
+    const current = moment();
+  
+    if (current.isAfter(expiredIn, "seconds")) {
+      return true;
+    }
+  
+    return false;
   }
 }

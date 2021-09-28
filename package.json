@@ -2,7 +2,8 @@
   "name": "@csoft/react-s3-upload",
   "version": "1.0.0",
   "dependencies": {
-    "aws-sdk": "^2.993.0"
+    "aws-sdk": "^2.993.0",
+    "moment": "^2.29.1"
   },
   "main": "./index.js",
   "devDependencies": {},
