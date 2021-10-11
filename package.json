@@ -14,7 +14,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://https://github.com/csoft-tech/react-s3-upload.git"
+    "url": "https://https://github.com/csoft-tech/react-s3-upload.git"
   },
   "description": "",
   "publishConfig": {
