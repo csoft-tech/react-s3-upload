@@ -6,13 +6,16 @@
     "moment": "^2.29.1"
   },
   "scripts": {
-    "build": "tsc",
     "deploy": "npm publish"
   },
   "main": "./index.js",
   "devDependencies": {},
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://https://github.com/csoft-tech/react-s3-upload.git"
+  },
   "description": "",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/@csoft"
