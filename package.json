@@ -1,5 +1,5 @@
 {
-  "name": "react-s3-upload",
+  "name": "@csoft/react-s3-upload",
   "version": "1.0.3",
   "dependencies": {
     "aws-sdk": "^2.993.0",
