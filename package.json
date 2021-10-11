@@ -5,6 +5,10 @@
     "aws-sdk": "^2.993.0",
     "moment": "^2.29.1"
   },
+  "scripts": {
+    "build": "tsc",
+    "deploy": "npm publish"
+  },
   "main": "./index.js",
   "devDependencies": {},
   "author": "",
