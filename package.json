@@ -1,8 +1,10 @@
 {
   "name": "@csoft/react-s3-upload",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "dependencies": {
-    "aws-sdk": "^2.993.0",
+    "@aws-sdk/client-s3": "^3.145.0",
+    "@aws-sdk/lib-storage": "^3.150.0",
+    "@aws-sdk/s3-request-presigner": "^3.150.0",
     "moment": "^2.29.1"
   },
   "scripts": {
