@@ -6,8 +6,12 @@ import {
   VIDEO_FORMAT,
   BLOB_SIZE
 } from './constants';
-import AWS from 'aws-sdk';
+// import * as AWS from "@aws-sdk/client-s3";
+import {S3Client, GetObjectCommand,} from "@aws-sdk/client-s3";
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Upload } from "@aws-sdk/lib-storage";
 import moment from 'moment';
+
 
 export class AwsService {
   //client;
@@ -18,8 +22,10 @@ export class AwsService {
    * - config.secretAccessKey = AWS secret access key
    */
   constructor(config) {
-    AWS.config.update(config);
     this.cache = {};
+    this.client = null;
+    this.config = config;
+    this.s3Configuration = ''
   }
 
   /**
@@ -27,11 +33,29 @@ export class AwsService {
    * @param {*} region Region name
    * @returns Bucket instance
    */
+
+
   getBucket(bucket, region) {
-    return new AWS.S3({
-      params: { Bucket: bucket },
-      region,
-    });
+    this.s3Configuration = {
+        credentials: {
+            accessKeyId: this.config.accessKeyId,
+            secretAccessKey: this.config.secretAccessKey
+        },
+        region: region,
+    };
+    let clients = new S3Client(this.s3Configuration);
+    let cmd = new GetObjectCommand({Bucket: bucket});
+    let data = ''
+    async function asyncCall (){
+      try {
+        data = await clients.send(cmd);
+        // process data.
+      } catch (error) {
+        // error handling.
+      }
+    }
+    asyncCall();
+    return data;
   }
 
   /**
@@ -42,111 +66,36 @@ export class AwsService {
    * @param {*} onProgress - Progress callback function
    */
   async uploadFile(Key,input, bucket, bucketName, onProgress) {
-    if (input.size < BLOB_SIZE) {
       return await new Promise((resolve, reject) => {
-        bucket
-          .upload({
-            Body: input,
-            Bucket: bucketName,
-            Key,
-          })
-          .on('httpUploadProgress', (e) => {
-            onProgress(((e.loaded / e.total) * 100).toFixed(2));
-          })
-          .send((err, data) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            resolve(data.Location);
+        try {
+          const parallelUploads3 = new Upload({
+            client: new S3Client(this.s3Configuration),
+            params: { Bucket:bucketName, Key:Key, Body:input },
+        
+            tags: [
+              /*...*/
+            ], // optional tags
+            queueSize: 4, // optional concurrency configuration
+            partSize: 1024 * 1024 * 5, // optional size of each part, in bytes, at least 5MB
+            leavePartsOnError: false, // optional manually handle dropped parts
           });
-      });
-    }
-
-    const parts = this.getFileSlices(input);
-    const uploadId = await new Promise((resolve, reject) => {
-      bucket.createMultipartUpload({ Key, Bucket: bucketName }, (err, data) => {
-        resolve(data.UploadId);
-      });
-    });
-
-    const multipartMap = { Parts: [] };
-    let loaded = 0;
-    for (var part of parts) {
-      let partsLoaded = 0;
-      const { ETag } = await new Promise((resolve, reject) => {
-        bucket
-          .uploadPart(
-            {
-              Bucket: bucketName,
-              Key,
-              PartNumber: part.id,
-              UploadId: uploadId,
-              Body: part.blob,
-            },
-            (err, data) => {
-              if (err) {
-                reject(err);
-                return;
-              }
-              resolve(data);
-            }
-          )
-          .on('httpUploadProgress', (e) => {
-            partsLoaded = e.loaded;
-            onProgress(
-              (((loaded + partsLoaded) / input.size) * 100).toFixed(2)
-            );
+        
+          parallelUploads3.on("httpUploadProgress", (progress) => {
+            console.log(progress);
           });
-      });
-      loaded += part.blob.size;
-      onProgress(((loaded / input.size) * 100).toFixed(2));
-
-      multipartMap.Parts[part.id] = {
-        ETag,
-        PartNumber: part.id,
-      };
-    }
-
-    return await new Promise((resolve, reject) => {
-      bucket.completeMultipartUpload(
-        {
-          Key,
-          Bucket: bucketName,
-          UploadId: uploadId,
-          MultipartUpload: multipartMap,
-        },
-        (err, data) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          onProgress(100);
-          resolve(data.Location);
+        
+           parallelUploads3.done().then(res =>{
+            console.log('Uploads3 ---->', res)
+            resolve()
+           }
+           
+           );
+        } catch (e) {
+          console.log(e);
+          reject(e);
         }
-      );
-    });
-  }
-
-  /**
-   * 
-   * @param {*} file 
-   * @returns Slices of files for chunk uploading
-   */
-  getFileSlices(file) {
-    const fileSize = file.size;
-    const blobSize = BLOB_SIZE;
-    const parts = [];
-
-    const numberOfParts = Math.ceil(fileSize / blobSize);
-    for (var i = 0; i < numberOfParts; i++) {
-      parts.push({
-        blob: file.slice(i * blobSize, i * blobSize + blobSize),
-        id: i + 1,
+        
       });
-    }
-
-    return parts;
   }
 
   /**
@@ -193,11 +142,9 @@ export class AwsService {
     if (this.cache[Key] && !this.isPresignedUrlExpired(this.cache[Key].time)) {
       return this.cache[Key].url;
     }
-    const url = await bucket.getSignedUrl("getObject", {
-      Bucket: bucketName,
-      Key,
-      Expires,
-    });
+    const s3 = new S3Client(this.s3Configuration);
+    const command = new GetObjectCommand({Bucket: bucketName, Key: Key });
+    const url = await getSignedUrl(s3, command, { expiresIn: Expires }); // expires in seconds
     this.cache[Key] = {
       url,
       time: moment().add(Expires, "seconds").subtract(10, "seconds"),
